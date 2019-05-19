@@ -1,31 +1,29 @@
 import cv2
 import numpy as np
+import os
 from urllib.request import Request, urlopen
 from math import sqrt
-from os import listdir, getcwd
 from json import dump, load
 
 
 # Const
-BASE_DIR = getcwd().replace('/src/app', '')
-IMG_PATH = BASE_DIR + "/src/app/static/images/copydays_original/"
+BASE_DIR = os.getcwd()
+IMG_PATH = BASE_DIR + "/static/images/copydays_original/"
 H = np.zeros((300,256,3))
 BINS = np.arange(256).reshape(256,1)
 COLOR = [ (255,0,0),(0,255,0),(0,0,255) ]
 
 def histogram(img):
-   for ch, col in enumerate(COLOR):
-    hist_item = cv2.calcHist([img],[ch],None,[256],[0,255])
-    cv2.normalize(hist_item,hist_item,0,255,cv2.NORM_MINMAX)
-    hist_item=np.int32(np.around(hist_item))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    img = img.mean(axis=2).flatten()
+    hist = np.histogram(img, range(257))
+    vector = []
+    for h in hist:
+        # convert numpy.int64 to int
+        h = [int(x) for x in h]
+        vector.extend(h)
 
-    # pts = np.column_stack((BINS,hist_item))
-    # cv2.polylines(H,[pts],False,col) 
-    # h=np.flipud(H)
-    # cv2.imshow('colorhist',h)
-    # if cv2.waitKey(0) == ord('q'):
-    #     print ("quit")
-    return hist_item.flatten().tolist()
+    return vector
 
 
 def cosine_angle(a, b):
@@ -41,12 +39,12 @@ def cosine_angle(a, b):
 
 def init():
     data = {}
-    for file in listdir(IMG_PATH):
+    for file in os.listdir(IMG_PATH):
         path = IMG_PATH + file
-        data[file.replace('.jpg', '')] = histogram(cv2.imread(path))
+        data[file] = histogram(cv2.imread(path))
     
-    # cache data
-    with open(BASE_DIR + 'cache/img.json', 'w') as f:
+    print(data['200100.jpg'])
+    with open(BASE_DIR + '/cache/img.json', 'w') as f:
         dump(data, f, indent=4)
 
 def search(query, data):
@@ -75,14 +73,16 @@ def get_img_from_url(url):
 def get_img(name):
     return cv2.imread(IMG_PATH + name)
 
-# def main():
-#     # init()
-#     data = get_data()
-#     query = histogram(cv2.imread(IMG_PATH + '204500.jpg'))
-#     print(search(query, data))
+def main():
+    init()
+    # data = get_data()
+    # print(IMG_PATH)
+    query = histogram(cv2.imread(IMG_PATH + '204500.jpg'))
+    print(query)
+    # print(search(query, data))
 
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
 
         
