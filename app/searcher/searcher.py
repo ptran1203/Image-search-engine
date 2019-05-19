@@ -27,9 +27,7 @@ def fvector(img):
     cv2.rectangle(topmask, (0, 0), (h//2, w), 255, -1)
     cv2.rectangle(botmask, (h//2, 0), (h, w), 255, -1)
     fvector = histogram(img, topmask)
-    print(len(fvector))
     fvector.extend(histogram(img, botmask))
-    print(len(fvector))
     return fvector
 
 
@@ -78,8 +76,12 @@ def get_img_from_url(url):
     img = cv2.imdecode(array, -1)
     return img
 
-def get_img(name):
-    return cv2.imread(IMG_PATH + name)
+def get_upload_img(file):
+    return cv2.imdecode(
+        np.fromstring(
+            file.read(), np.uint8
+            ), cv2.IMREAD_UNCHANGED
+        )
 
 def main():
     # init()
