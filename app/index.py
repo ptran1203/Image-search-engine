@@ -4,7 +4,7 @@ from searcher.searcher import (
     get_img,
     get_data,
     search,
-    histogram
+    fvector
 )
 
 IMG_PATH = "/static/images/copydays_original/"
@@ -18,13 +18,15 @@ def index():
 @app.route("/results", methods=["GET", "POST"])
 def results():
     url = request.form['img-url'] or False
-    # print(get_img_from_url(url))
     res = search(
-        histogram(get_img_from_url(url) if "http" in url else get_img(url)),
-        get_data()
+        fvector(get_img_from_url(url) if "http" in url else get_img(url)),
+        get_data(),
+        5
     ) if url else False
 
-    # print(res)
+    if not res:
+        return "not found"
+
     images = []
     for name in res:
         path = IMG_PATH + name[0]
