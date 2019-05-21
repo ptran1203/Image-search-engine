@@ -8,6 +8,8 @@
     <div class="container">
         <h4>Result</h4>
         {% for img in images %}
+        {{loop.index}}
+        <!-- {{img}} -->
         <img src="{{img}}" alt="">
         {% endfor %}
     </div>

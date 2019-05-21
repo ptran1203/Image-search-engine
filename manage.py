@@ -14,7 +14,7 @@ def run_command(path):
 # if command == "train":
 #     run_command("src/train_md.py")
 
-if command == "init":
+if command == "build":
     run_command("app/searcher/searcher.py")
 
 if command == "server":

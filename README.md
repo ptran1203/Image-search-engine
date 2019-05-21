@@ -7,6 +7,7 @@
 2. install package dependencies:
     - pip install -r requirements.txt
 
-3. run server:
+3. run:
     - In the root folder of project, run the following command
     - python manage.py server
+    - Build data: python manage.py build

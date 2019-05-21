@@ -4,91 +4,121 @@ import os
 from urllib.request import Request, urlopen
 from math import sqrt
 from json import dump, load
-
+import mahotas as mt
+from matplotlib import pyplot as plt
 
 # Const
 BASE_DIR = os.getcwd() + "/app"
 IMG_PATH = BASE_DIR + "/static/images/copydays_original/"
 BINS = (12, 8, 3)
 
-def histogram(img, mask):
-    hist = cv2.calcHist(
-        [img], [0, 1, 2], mask, BINS, [0,256,0,256,0,256]
-    )
-    hist = cv2.normalize(hist, hist).flatten()
-    return [float(x) for x in hist.tolist()]
+class ImageDescriptor:
+    def __init__(self, img):
+        self.img = img
 
-
-def fvector(img):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    h, w = img.shape[:2]
-    topmask = np.zeros((h, w),np.uint8)
-    botmask = np.zeros((h, w),np.uint8)
-    cv2.rectangle(topmask, (0, 0), (h//2, w), 255, -1)
-    cv2.rectangle(botmask, (h//2, 0), (h, w), 255, -1)
-    fvector = histogram(img, topmask)
-    fvector.extend(histogram(img, botmask))
-    return fvector
-
-
-def cosine_angle(a, b):
-    dividend = (sqrt(
-                sum([x**2 for x in a])
-            ) * sqrt(
-                sum([x**2 for x in b])
-            ))
-
-    if sum(a) == 0 or dividend == 0:
-        return 0
-
-    return sum(
-        [x*y for x, y in zip(a, b)]
-        ) / dividend
-
-
-def init():
-    data = {}
-    for file in os.listdir(IMG_PATH):
-        path = IMG_PATH + file
-        data[file] = fvector(cv2.imread(path))
-    
-    with open(BASE_DIR + '/cache/img.json', 'w') as f:
-        dump(data, f, indent=4)
-
-def search(query, data, limit=10):
-    data_tmp = {}
-    for k, v in data.items():
-        data_tmp[k] = cosine_angle(query, v)
-
-    return [x for x in sorted(data_tmp.items(),key=lambda kv: -kv[1])][:limit]
-
-
-def get_data(isCached=True):
-    if not isCached:
-        init()
-
-    with open(BASE_DIR + '/cache/img.json', 'r') as f:
-        return load(f)
-
-def get_img_from_url(url):
-    res = urlopen(Request(url, headers={'User-Agent': 'Mozilla/5.0'}))
-    array = np.asarray(bytearray(res.read()), dtype=np.uint8)
-    img = cv2.imdecode(array, -1)
-    return img
-
-def get_upload_img(file):
-    return cv2.imdecode(
-        np.fromstring(
-            file.read(), np.uint8
-            ), cv2.IMREAD_UNCHANGED
+    def histogram(self, mask):
+        hist = cv2.calcHist(
+            [self.img], [0, 1, 2], mask, BINS, [0, 256, 0, 256, 0, 256] 
         )
+        hist = cv2.normalize(hist, hist).flatten()
+
+        return [float(x) for x in hist.tolist()]
+
+    def color_feature(self):
+        self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+        h, w = self.img.shape[:2]
+        topmask = np.zeros((h, w),np.uint8)
+        botmask = np.zeros((h, w),np.uint8)
+        cv2.rectangle(topmask, (0, 0), (h//2, w), 255, -1)
+        cv2.rectangle(botmask, (h//2, 0), (h, w), 255, -1)
+        features = self.histogram(topmask)
+        features.extend(self.histogram(botmask))
+        return features
+
+    def plot_hist(self):
+        plt.hist(self.histogram(None), normed=False, bins=256)
+        # plt.hist(self.img, normed=False, bins=256)
+        plt.ylabel('Probability')
+        plt.show()
+
+class Searcher:
+    def __init__(self, query_v, data):
+        self.query_vector = query_v
+        self.data = data
+
+    def _cosine(self, vectorb):
+        vectora = self.query_vector
+        dividend = sqrt(
+                sum([x**2 for x in vectora])
+            ) * sqrt(
+                sum([x**2 for x in vectorb])
+            )
+
+        if sum(vectora) == 0 or dividend == 0:
+            return 0
+
+        return sum(
+            [x*y for x, y in zip(vectora, vectorb)]
+            ) / dividend
+
+    def search(self, limit=10):
+        data_tmp = {}
+        for k, v in self.data.items():
+            data_tmp[k] = self._cosine(v)
+        
+        return [x for x in sorted(data_tmp.items(),key=lambda kv: -kv[1])][:limit]
+
+        # not in use
+        sorted_by_fcolor = [x for x in sorted(
+            data_tmp.items(),
+            key=lambda kv: -kv[1]
+            )][:10]
+
+        data_ftexture = {key[0]: self.data[key[0]]['ftexture'] for key in sorted_by_fcolor}
+
+        data_tmp = {}
+        for k, v in data_ftexture.items():
+            data_tmp[k] = self._cosine(v)
+        
+        return [x for x in sorted(data_tmp.items(),key=lambda kv: kv[1])][:limit]
+
+
+class Database:
+    def __init__(self, isCached=True):
+        if not isCached:
+            self.build()
+
+        with open(BASE_DIR + '/cache/img.json', 'r') as f:
+            self.data = load(f)
+
+    @staticmethod
+    def build():
+        print("START building...")
+        data = {}
+        files = os.listdir(IMG_PATH)
+        length = len(files)
+        for i, file in enumerate(files):
+            path = IMG_PATH + file
+            data[file] = ImageDescriptor(cv2.imread(path)).color_feature()
+            print("progress: %s/ %s" %(i + 1, len(files)))
+
+        print("DONE!!")
+        with open(BASE_DIR + '/cache/img.json', 'w') as f:
+            dump(data, f, indent=4, sort_keys=True)
+
+        print("DATA SAVED!")
+            
 
 def main():
-    init()
-    # trial
-    data = get_data()
-    query = fvector(cv2.imread(IMG_PATH + '204500.jpg'))
-    print(search(query, data))
+    # build the data
+    database = Database(False)
+
+    # img1 = ImageDescriptor(cv2.imread(IMG_PATH + "200000.jpg"))
+    # img2 = ImageDescriptor(cv2.imread(IMG_PATH + "215000.jpg"))
+    # img1.plot_hist()
+    # img2.plot_hist()
+    # searcher = Searcher(img1.color_feature(), database.data).search()
+    # print(searcher)
 
 
 if __name__ == "__main__":
