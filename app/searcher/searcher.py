@@ -7,7 +7,7 @@ from json import dump, load
 
 
 # Const
-BASE_DIR = os.getcwd()
+BASE_DIR = os.getcwd() + "/app"
 IMG_PATH = BASE_DIR + "/static/images/copydays_original/"
 BINS = (12, 8, 3)
 
@@ -84,7 +84,7 @@ def get_upload_img(file):
         )
 
 def main():
-    # init()
+    init()
     # trial
     data = get_data()
     query = fvector(cv2.imread(IMG_PATH + '204500.jpg'))
