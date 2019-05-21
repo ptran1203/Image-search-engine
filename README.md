@@ -1,2 +1,6 @@
 # Image-search-engine
-A tool use for search image by example
+
+1. move to: app folder
+2. python index.py
+
+
