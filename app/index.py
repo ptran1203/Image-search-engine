@@ -10,7 +10,7 @@ import os
 
 app = Flask(__name__)
 
-IMG_PATH = "/static/images/copydays_original/"
+IMG_PATH = "/static/images/"
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'static/images')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -27,25 +27,30 @@ def results():
     if request.method == "POST":
         if 'img-file' in request.files:
             file = request.files['img-file']
-            img = ImageDescriptor(file)
+            img = ImageDescriptor(file, False)
             path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
             file.save(path)
         else:
             url = request.form['img-url']
-            img = ImageDescriptor(url)
+            img = ImageDescriptor(url, False)
             path = url
     
     db = Database(True)
     searcher = Searcher(img.color_feature(), db.data)
     res = searcher.search(10)
-    print(res)
+    for r in res:
+        print(r)
     if not res:
         return "not found"
 
     images = []
-    for name in res:
-        path = IMG_PATH + name[0]
-        images.append(path)
+    for r in res:
+        path = IMG_PATH + r[0]
+        accuracy = round(r[1], 2)
+        images.append({
+            "path": path,
+            "accuracy": accuracy
+        })
 
     return render_template(
         "results.html",

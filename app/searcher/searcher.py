@@ -9,14 +9,17 @@ from matplotlib import pyplot as plt
 
 # Const
 BASE_DIR = os.getcwd() + "/app"
-IMG_PATH = BASE_DIR + "/static/images/copydays_original/"
+IMG_PATH = BASE_DIR + "/static/images/"
 BINS = (12, 8, 3)
 
 class ImageDescriptor:
-    def __init__(self, path):
-        self.img = self._get_img(path)
+    def __init__(self, path, isLocal=True):
+        self.img = self._get_img(path, isLocal)
 
-    def _get_img(self, path):
+    def _get_img(self, path, isLocal):
+        if isLocal:
+            return cv2.imread(path)
+
         if ("http") in path:
             res = urlopen(Request(path, headers={'User-Agent': 'Mozilla/5.0'}))
             array = np.asarray(bytearray(res.read()), dtype=np.uint8)
@@ -78,10 +81,11 @@ class Searcher:
 
     def search(self, limit=10):
         data_tmp = {}
+        print(len(self.data))
         for k, v in self.data.items():
             data_tmp[k] = self._cosine(v)
         
-        return [x for x in sorted(data_tmp.items(),key=lambda kv: -kv[1])][:limit]
+        return [x for x in sorted(data_tmp.items(),key=lambda kv: -kv[1]) if 0.6 < x[1]][:limit]
 
         # not in use
         sorted_by_fcolor = [x for x in sorted(
@@ -114,7 +118,7 @@ class Database:
         length = len(files)
         for i, file in enumerate(files):
             path = IMG_PATH + file
-            data[file] = ImageDescriptor(cv2.imread(path)).color_feature()
+            data[file] = ImageDescriptor(path).color_feature()
             print("progress: %s/ %s" %(i + 1, len(files)))
 
         print("DONE!!")
