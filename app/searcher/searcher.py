@@ -13,8 +13,23 @@ IMG_PATH = BASE_DIR + "/static/images/copydays_original/"
 BINS = (12, 8, 3)
 
 class ImageDescriptor:
-    def __init__(self, img):
-        self.img = img
+    def __init__(self, path):
+        self.img = self._get_img(path)
+
+    def _get_img(self, path):
+        if ("http") in path:
+            res = urlopen(Request(path, headers={'User-Agent': 'Mozilla/5.0'}))
+            array = np.asarray(bytearray(res.read()), dtype=np.uint8)
+            img = cv2.imdecode(array, -1)
+            if img is not None:
+                return img
+        
+        return cv2.imdecode(
+        np.fromstring(
+            path.read(), np.uint8
+            ), cv2.IMREAD_UNCHANGED
+        )
+
 
     def histogram(self, mask):
         hist = cv2.calcHist(
