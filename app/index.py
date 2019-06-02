@@ -3,8 +3,6 @@ from searcher.searcher import (
     ImageDescriptor,
     Searcher,
     Database,
-    get_upload_img,
-    get_img_from_url
 )
 from werkzeug.utils import secure_filename
 import os
@@ -29,12 +27,12 @@ def results():
     if request.method == "POST":
         if 'img-file' in request.files:
             file = request.files['img-file']
-            img = ImageDescriptor(get_upload_img(file))
+            img = ImageDescriptor(file)
             path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
             file.save(path)
         else:
             url = request.form['img-url']
-            img = ImageDescriptor(get_img_from_url(url))
+            img = ImageDescriptor(url)
             path = url
     
     db = Database(True)
