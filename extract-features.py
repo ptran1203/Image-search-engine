@@ -1,6 +1,7 @@
 import pickle
 import cv2
 import numpy as np
+
 def extract_features(image, vector_size=32):
     try:
         alg = cv2.xfeatures2d.SIFT_create()
@@ -17,15 +18,17 @@ def extract_features(image, vector_size=32):
     return dsc.reshape(1, -1)
 
 with open('images.pickle', 'rb') as f:
-    images, images_names = pickle.load(f)
+    images, images_names, init = pickle.load(f)
 
+print(init)
 dsc_list = []
 
 for i, image in enumerate(images):
-    print(f'{i} extracting {images_names[i]}')
+    print(f'{i} extracting {images_names[i]} features {" - xxxxxxxxx" if i % 2 == 0 else " - xx"}')
     dsc = extract_features(image)
     dsc_list.append(dsc)
 
 with open('dsc_list.pickle', 'wb') as f:
+    print('dumping dsc_list.pickle ....')
     pickle.dump(dsc_list, f)
-
+    print('done')

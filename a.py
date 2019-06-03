@@ -35,30 +35,43 @@ def extract_features(image, vector_size=32):
 
 
 with open("dsc_list.pickle", "rb") as f:
+    print('loading dsc_list.pickle ...')
     descriptor_list = pickle.load(f)
+    print('...')
 
 descriptor_list = np.array(descriptor_list)  
 
 with open("images.pickle", "rb") as f:
+    print('loading images.pickle ...')
     images, images_names = pickle.load(f)
-
-# for index, i in enumerate(images):
-#     show(i, images_names[index])
-#     cv2.waitKey(0)
-#     cv2.destroyWindow(images_names[index])
+    print('...')
 
 
-def cos_cdist(dsc_list, input_dsc):
-    dsc_list = [i[0].reshape(1, -1) for i in dsc_list]
-    print(dsc_list[0].shape)
+
+
+def cos_cdist(images, input_dsc):
+    dsc_list = [i[0] for i in images]
     v = input_dsc.reshape(1, -1)
-    print(v.shape)
-    return scipy.spatial.distance.cdist(dsc_list, v, 'cosine').reshape(-1)
+    dist = scipy.spatial.distance.cdist(dsc_list, v, 'cosine').reshape(-1)
+    for idx, i in enumerate(dist):
+        images[idx] = list(images[idx])
+        images[idx][3] = i
+        images[idx] = tuple(images[idx])
+    return images
 
-kmeans = KMeans(n_clusters = 8)
 n, x, y = descriptor_list.shape
-
 descriptor_list = descriptor_list.reshape((n, x*y))
+
+n = len(images)
+centers = []
+
+for i in range(0, n, int(n/8)):
+    print(images_names[i])
+    centers.append(descriptor_list[i])
+centers = np.array(centers)
+
+kmeans = KMeans(n_clusters = 8, init=centers, n_init=1)
+
 kmeans.fit(descriptor_list)
 
 data = random.choice(images)
@@ -67,7 +80,7 @@ print('extracting input image')
 data_dsc = extract_features(data)
 print('searching ...')
 
-# show(data, "input image")
+show(data, "input image")
 
 
 
@@ -82,12 +95,22 @@ good_images = []
 
 for index, i in enumerate(labels):
     if i == rs[0]:
-        good_images.append((descriptor_list[index] ,images[index], images_names[index]))
-        
-distances = cos_cdist(good_images, data_dsc)
+        # show(images[index], images_names[index])
+        # cv2.waitKey(0)
+        # cv2.destroyWindow(images_names[index])
+        good_images.append((descriptor_list[index] ,images[index], images_names[index], -1))
 
-print(distances)
-
+print(len(good_images))      
+images_dist = cos_cdist(good_images, data_dsc)
+images_dist = sorted(images_dist, key=lambda x: x[3])
+# for index, i in enumerate(images):
+#     show(i, images_names[index])
+#     cv2.waitKey(0)
+#     cv2.destroyWindow(images_names[index])
+for img in images_dist[:5]:
+    show(img[1], f'{img[2]} - {img[3]}')
+    cv2.waitKey(0)
+    cv2.destroyWindow(f'{img[2]} - {img[3]}')
 
 
 
