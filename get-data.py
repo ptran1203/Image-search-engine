@@ -21,7 +21,7 @@ for i, sf in enumerate(subfolders):
         images_names.append(f)
         stt+=1
 
-with open('images.pickle', 'wb') as f:
+with open('./pickled/images.pickle', 'wb') as f:
     print('dumping images.pickle ... ')
     pickle.dump((images, images_names, init_indices), f)
 

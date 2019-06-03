@@ -7,14 +7,14 @@ import pickle
 import random 
 import scipy
 
-with open("dsc_list.pickle", "rb") as f:
+with open("./pickled/dsc_list.pickle", "rb") as f:
     print('loading dsc_list.pickle ...')
     descriptor_list = pickle.load(f)
     print('done')
 f.close()
 descriptor_list = np.array(descriptor_list)  
 
-with open("images.pickle", "rb") as f:
+with open("./pickled/images.pickle", "rb") as f:
     print('loading images.pickle ...')
     images, images_names, init = pickle.load(f)
     print('done')
@@ -49,7 +49,7 @@ print('start training ...')
 kmeans.fit(descriptor_list)
 print('finished training.')
 
-with open("kmeans.pickle", "wb") as f:
+with open("./pickled/kmeans.pickle", "wb") as f:
     print('dumping kmeans.pickle ....')
     pickle.dump(kmeans, f)
     print('done')

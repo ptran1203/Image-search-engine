@@ -17,7 +17,7 @@ def extract_features(image, vector_size=32):
         return None
     return dsc.reshape(1, -1)
 
-with open('images.pickle', 'rb') as f:
+with open('./pickled/images.pickle', 'rb') as f:
     images, images_names, init = pickle.load(f)
 
 print(init)
@@ -28,7 +28,7 @@ for i, image in enumerate(images):
     dsc = extract_features(image)
     dsc_list.append(dsc)
 
-with open('dsc_list.pickle', 'wb') as f:
+with open('./pickled/dsc_list.pickle', 'wb') as f:
     print('dumping dsc_list.pickle ....')
     pickle.dump(dsc_list, f)
     print('done')
