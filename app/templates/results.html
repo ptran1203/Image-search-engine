@@ -8,18 +8,27 @@
     <div class="container">
         <h4>Result</h4>
         {% for img in images %}
-        {{loop.index}}
-        <!-- {{img}} -->
-        <img src="{{img}}" alt="">
+        <div class='block'>
+            {{loop.index}}
+            <!-- {{img}} -->
+            <img src="{{img['path']}}" alt="">
+            <span>{{img['accuracy']}}</span>
+        </div>
         {% endfor %}
     </div>
    
 
 <style>
+    div.block {
+        display: inline-block,
+
+    }
     img {
         width: 300px;
-        height: auto;
-        padding: 14px;
+        /* height: 0; */
+        padding: 5px;
+        /* top: 50%; */
+        /* left: 50%; */
     }
 </style>
 {%endblock content%}
