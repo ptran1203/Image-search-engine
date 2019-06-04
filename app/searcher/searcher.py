@@ -1,63 +1,19 @@
 import cv2
 import numpy as np
 import os
+import pickle
 from urllib.request import Request, urlopen
 from math import sqrt
 from json import dump, load
-import mahotas as mt
 from matplotlib import pyplot as plt
+# from cluster import ImageDescriptor, ImageCluster
+
 
 # Const
-BASE_DIR = os.getcwd() + "/app"
-IMG_PATH = BASE_DIR + "/static/images/"
+# /app
+BASE_DIR = os.path.dirname(os.getcwd())
+IMG_PATH = os.path.join(BASE_DIR, "static/images")
 BINS = (12, 8, 3)
-
-class ImageDescriptor:
-    def __init__(self, path, isLocal=True):
-        self.img = self._get_img(path, isLocal)
-
-    def _get_img(self, path, isLocal):
-        if isLocal:
-            return cv2.imread(path)
-
-        if ("http") in path:
-            res = urlopen(Request(path, headers={'User-Agent': 'Mozilla/5.0'}))
-            array = np.asarray(bytearray(res.read()), dtype=np.uint8)
-            img = cv2.imdecode(array, -1)
-            if img is not None:
-                return img
-        
-        return cv2.imdecode(
-        np.fromstring(
-            path.read(), np.uint8
-            ), cv2.IMREAD_UNCHANGED
-        )
-
-
-    def histogram(self, mask):
-        hist = cv2.calcHist(
-            [self.img], [0, 1, 2], mask, BINS, [0, 256, 0, 256, 0, 256] 
-        )
-        hist = cv2.normalize(hist, hist).flatten()
-
-        return [float(x) for x in hist.tolist()]
-
-    def color_feature(self):
-        self.img = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
-        h, w = self.img.shape[:2]
-        topmask = np.zeros((h, w),np.uint8)
-        botmask = np.zeros((h, w),np.uint8)
-        cv2.rectangle(topmask, (0, 0), (h//2, w), 255, -1)
-        cv2.rectangle(botmask, (h//2, 0), (h, w), 255, -1)
-        features = self.histogram(topmask)
-        features.extend(self.histogram(botmask))
-        return features
-
-    def plot_hist(self):
-        plt.hist(self.histogram(None), normed=False, bins=256)
-        # plt.hist(self.img, normed=False, bins=256)
-        plt.ylabel('Probability')
-        plt.show()
 
 class Searcher:
     def __init__(self, query_v, data):
@@ -107,8 +63,8 @@ class Database:
         if not isCached:
             self.build()
 
-        with open(BASE_DIR + '/cache/img.json', 'r') as f:
-            self.data = load(f)
+        with open(BASE_DIR + '/cache/img.pkl', 'rb') as f:
+            self.data = pickle.load(f)
 
     @staticmethod
     def build():
@@ -122,25 +78,9 @@ class Database:
             print("progress: %s/ %s" %(i + 1, len(files)))
 
         print("DONE!!")
-        with open(BASE_DIR + '/cache/img.json', 'w') as f:
-            dump(data, f, indent=4, sort_keys=True)
+        with open(BASE_DIR + '/cache/img.pkl', 'wb') as f:
+            pickle.dump(data, f)
 
         print("DATA SAVED!")
-            
-
-def main():
-    # build the data
-    database = Database(False)
-
-    # img1 = ImageDescriptor(cv2.imread(IMG_PATH + "200000.jpg"))
-    # img2 = ImageDescriptor(cv2.imread(IMG_PATH + "215000.jpg"))
-    # img1.plot_hist()
-    # img2.plot_hist()
-    # searcher = Searcher(img1.color_feature(), database.data).search()
-    # print(searcher)
-
-
-if __name__ == "__main__":
-    main()
 
         
