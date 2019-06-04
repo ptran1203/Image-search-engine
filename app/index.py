@@ -23,17 +23,18 @@ def index():
 @app.route("/results", methods=["GET", "POST"])
 def results():
     img = None
-    path = None
+    img_src = None
     if request.method == "POST":
         if 'img-file' in request.files:
             file = request.files['img-file']
-            img = ImageDescriptor(file, False)
-            path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
-            file.save(path)
+            img_src = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
+            file.save(img_src)
+            img = ImageDescriptor(img_src, True)
+            img_src = os.path.join(IMG_PATH, file.filename)
         else:
             url = request.form['img-url']
             img = ImageDescriptor(url, False)
-            path = url
+            img_src = url
     
     db = Database(True)
     searcher = Searcher(img.color_feature(), db.data)
@@ -41,7 +42,7 @@ def results():
     for r in res:
         print(r)
     if not res:
-        return "not found"
+        return "error"
 
     images = []
     for r in res:
@@ -55,7 +56,7 @@ def results():
     return render_template(
         "results.html",
         images=images,
-        img_src=(request.form['img-url'] or False)
+        img_src=img_src
     )
 
 if __name__ == "__main__":
