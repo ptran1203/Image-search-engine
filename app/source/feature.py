@@ -4,10 +4,17 @@ import numpy as np
 import json
 import re
 import scipy
+from urllib.request import urlopen, Request
 from math import sqrt
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
-from helper import gray, show, load, save
+
+# TODO: avoid importError when use helper in index.py
+try:
+    from helper import gray, show, load, save
+except ImportError:
+    from source.helper import gray, show, load, save
+
 
 BASE_DIR = os.path.join(os.getcwd(), "app")
 EXTRACTOR = cv2.xfeatures2d.SURF_create()
@@ -15,10 +22,21 @@ IMG_DIR = os.path.join(BASE_DIR, "static/datasets")
 
 class ImageDescriptor:
     def __init__(self, path):
-        self.image = cv2.imread(path)
+        self.image = self._getimg(path)
         # self.path = path
         self.keypoint, self.descriptor = self._features(EXTRACTOR)
 
+    @staticmethod
+    def _getimg(path):
+        if "http" in path:
+            res = urlopen(Request(path, headers={'User-Agent': 'Mozilla/5.0'}))
+            array = np.asarray(bytearray(res.read()), dtype=np.uint8)
+            img = cv2.imdecode(array, -1)
+            if img is not None:
+                print(type(img))
+                return img
+
+        return cv2.imread(path)
 
     def _features(self, extractor):
         image = gray(self.image)
@@ -97,11 +115,14 @@ class Searcher:
     @staticmethod
     def _cosine(vectora, vectorb):
         return scipy.spatial.distance.cdist(
+            # euclidean or cosine
             vectora.reshape(1, -1), vectorb.reshape(1, -1), 'cosine'
         )
 
     def search(self, imgpath, limit=10):
         img_dsc = ImageDescriptor(imgpath)
+        if img_dsc.image is None:
+            return None
         img_pre = self.cluster.predict(img_dsc)
         images = self.cluster.images
         matched_imgs = load(
@@ -110,7 +131,7 @@ class Searcher:
         cos_dict = {}
         rex = re.compile(r'_[0-9]+.[a-z]+')
         for name in matched_imgs[img_pre[0]]:
-            path = os.path.join(IMG_DIR, re.sub(rex,'', name),name)
+            path = os.path.join("/static/datasets/", re.sub(rex,'', name),name)
             cos_dict[name] = (
                 self._cosine(img_dsc.descriptor,
                         images[name]),
@@ -126,13 +147,19 @@ def loadmodel():
 
 
 if __name__ == "__main__":
-    import time
-    cluster = loadmodel()
-    searcher = Searcher(cluster)
-
-    imgpath = os.path.join(IMG_DIR, "person", "person_0000.jpg")
-    start = time.time()
-    res = searcher.search(imgpath)
-    end = time.time()
-    print(end-start)
-    print(res)
+    from feature import *
+    # import time
+    # cluster = loadmodel()    
+    # searcher = Searcher(cluster)
+    # imgpath = os.path.join(IMG_DIR, "person", "person_0000.jpg")
+    # start = time.time()
+    # res = searcher.search(imgpath)
+    # end = time.time()
+    # print(res)
+    # rebuild-all
+    db = Database(0, False)
+    cluster = ImageCluster(db.images, 32)
+    #cache
+    save(cluster.clustered_images(),
+        os.path.join(BASE_DIR, "cache/clustered.pkl"))
+    save(cluster, os.path.join(BASE_DIR, "cache/model.pkl"))

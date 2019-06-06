@@ -9,5 +9,5 @@
 
 3. run:
     - In the root folder of project, run the following command
-    - python manage.py server
-    - Build data: python manage.py build
+    - python3 app/source/index.py
+    - Build data: app/source/build.py

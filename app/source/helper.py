@@ -9,6 +9,8 @@ def show(img, name):
     cv2.destroyWindow(name)
 
 def gray(img):
+    if img is None:
+        return img
     img = img.astype('uint8')
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
