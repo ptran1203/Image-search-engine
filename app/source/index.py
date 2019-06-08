@@ -26,7 +26,6 @@ if __name__ == '__main__':
     searcher = Searcher(cluster)
 
     app.static_folder=BASE_DIR + app.static_url_path
-    print(app.static_folder)
     @app.route("/", methods=["GET", "POST"])
     def index():
         return render_template('index.html')
@@ -48,7 +47,7 @@ if __name__ == '__main__':
                 img_src = img_path
 
         
-        res = searcher.search(img_path)
+        res = searcher.search(img_path, 20)
         if not res:
             return render_template('notfound.html')
 
@@ -58,11 +57,10 @@ if __name__ == '__main__':
                 "path": img[1][1],
                 "accuracy": img[1][0].tolist()[0][0]
             })
-
         return render_template(
             "results.html",
             images=images,
-            # img_src=img_src
+            img_src=img_src.replace(app.static_folder, "/static")
         )
 
     if __name__ == "__main__":

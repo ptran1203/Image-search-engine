@@ -17,14 +17,20 @@ except ImportError:
 
 
 BASE_DIR = os.path.join(os.getcwd(), "app")
-EXTRACTOR = cv2.xfeatures2d.SURF_create()
+EXTRACTOR = cv2.xfeatures2d.SIFT_create()
 IMG_DIR = os.path.join(BASE_DIR, "static/datasets")
 
 class ImageDescriptor:
     def __init__(self, path):
+        # rex = re.compile(r'[a-z0-9_]+\.[a-z]+')
         self.image = self._getimg(path)
+        # self.name = self._file_name(path, rex)
         # self.path = path
-        self.keypoint, self.descriptor = self._features(EXTRACTOR)
+        self.keypoint, self.descriptors = self._features(EXTRACTOR)
+
+    @staticmethod
+    def _file_name(path, rex):
+        return re.search(rex, path).group()
 
     @staticmethod
     def _getimg(path):
@@ -42,14 +48,11 @@ class ImageDescriptor:
         image = gray(self.image)
         kps = extractor.detect(image)
         kps = sorted(kps, key=lambda x: -x.response)[:32]
-        keypoints, descriptor = extractor.compute(image, kps)
-        if descriptor is None:
-            descriptor = np.zeros(0)
-        descriptor = descriptor.flatten()
-        size = 32 * 64
-        if descriptor.size < size:
-            descriptor = np.concatenate([descriptor, np.zeros(size - descriptor.size)])
-        return keypoints, descriptor
+        keypoints, descriptors = extractor.compute(image, kps)
+        if descriptors is None:
+            descriptors = np.zeros(0)
+
+        return keypoints, descriptors
 
 
 class ImageCluster:
@@ -59,26 +62,32 @@ class ImageCluster:
         self.kmeans.fit(np.array(self._descriptor_list()))
 
     def _descriptor_list(self):
-        return [descriptor for descriptor in self.images.values()]
+        res = []
+        for img_dsc in self.images.values():
+            for dsc in img_dsc:
+                res.append(dsc)
 
-    def predict(self, img_dsc):
+        return res
+
+    def histogram(self, img_dsc):
         if type(img_dsc).__module__ != np.__name__:
-            img_dsc = img_dsc.descriptor
-        res = self.kmeans.predict(
-            img_dsc.reshape(1 , -1)
-        )
-        return res
+            img_dsc = img_dsc.descriptors
 
-    def clustered_images(self):
+        his = np.zeros(len(self.kmeans.cluster_centers_))
+        for dsc in img_dsc:
+            prediction = self.kmeans.predict(
+                img_dsc
+                )
+            for pre in prediction:
+                his[pre] += 1
+        return his
+
+    def create_histograms(self):
         res = {}
-        for name, descriptor in self.images.items():
-            if descriptor is not None:
-                key = self.predict(descriptor)[0] or None
-                if key:
-                    if key not in res:
-                        res[key] = []
-                    res[key].append(name)
-        return res
+        for img, dsc in self.images.items():
+            res[img] = self.histogram(dsc)
+
+        return res        
 
 
 class Database:
@@ -93,20 +102,17 @@ class Database:
         print("START building...")
         data = {}
         sub_dirs = os.listdir(IMG_DIR)
-        if num > 0:
-            sub_dirs = sub_dirs[:num]
-        length = len(sub_dirs)
+        # if num > 0:
+        #     sub_dirs = sub_dirs[:num]
+
         for sdir in sub_dirs:
             subpaths = os.path.join(IMG_DIR, sdir)
             for file in os.listdir(subpaths):
                 path = os.path.join(subpaths, file)
-                data[file] = ImageDescriptor(path).descriptor
-                # print("progress: %s/ %s" %(i + 1, len(sub_dirs)))
+                data[file] = ImageDescriptor(path).descriptors
 
         print("DONE!!")
         save(data, os.path.join(BASE_DIR, "cache/images.pkl"))
-
-        print("DATA SAVED!")
 
 class Searcher:
     def __init__(self, cluster_object):
@@ -123,22 +129,21 @@ class Searcher:
         img_dsc = ImageDescriptor(imgpath)
         if img_dsc.image is None:
             return None
-        img_pre = self.cluster.predict(img_dsc)
+        fea_vector = self.cluster.histogram(img_dsc)
         images = self.cluster.images
-        matched_imgs = load(
-            os.path.join(BASE_DIR, "cache/clustered.pkl")
+        feature_vectors = load(
+            os.path.join(BASE_DIR, "cache/feature_vectors.pkl")
         )
         cos_dict = {}
         rex = re.compile(r'_[0-9]+.[a-z]+')
-        for name in matched_imgs[img_pre[0]]:
+        for name, fea_vec in feature_vectors.items():
             path = os.path.join("/static/datasets/", re.sub(rex,'', name),name)
             cos_dict[name] = (
-                self._cosine(img_dsc.descriptor,
-                        images[name]),
+                self._cosine(fea_vector, fea_vec),
                 path
             )
 
-        res = sorted(cos_dict.items(), key=lambda x: -x[1][0])[:10]
+        res = sorted(cos_dict.items(), key=lambda x: x[1][0])
         return res[:limit]
 
 # load cluster model
@@ -147,19 +152,20 @@ def loadmodel():
 
 
 if __name__ == "__main__":
-    from feature import *
-    # import time
-    # cluster = loadmodel()    
-    # searcher = Searcher(cluster)
-    # imgpath = os.path.join(IMG_DIR, "person", "person_0000.jpg")
-    # start = time.time()
-    # res = searcher.search(imgpath)
-    # end = time.time()
-    # print(res)
-    # rebuild-all
-    db = Database(0, False)
-    cluster = ImageCluster(db.images, 32)
-    #cache
-    save(cluster.clustered_images(),
-        os.path.join(BASE_DIR, "cache/clustered.pkl"))
-    save(cluster, os.path.join(BASE_DIR, "cache/model.pkl"))
+    # cluster = load(os.path.join(BASE_DIR, "cache/model.pkl"))
+    # imgpath = os.path.join(IMG_DIR, "person", "person_0001.jpg")
+    # img = ImageDescriptor(imgpath)
+    # print(cluster.histogram(img))
+    # hiss = load(os.path.join(BASE_DIR, "cache/feature_vectors.pkl"))
+    # print(hiss['person_0000.jpg'])
+
+    cluster = load(os.path.join(BASE_DIR, "cache/model.pkl"))
+    save(cluster.create_histograms(),
+        os.path.join(BASE_DIR, "cache/feature_vectors.pkl"))
+
+    
+    # from feature import *
+    # db = Database(0, False)
+    # cluster = ImageCluster(db.images, 32)
+    # save(cluster, os.path.join(BASE_DIR, "cache/model.pkl"))
+    
