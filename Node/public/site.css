@@ -1,0 +1,17 @@
+
+html, body {
+    margin: 0;
+    font-size: 15px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+/* 
+#root::-webkit-scrollbar { 
+    width: 0 !important;
+} */
+p {
+    margin: 0;
+    margin-bottom: 5px;
+}
+.body-layout {
+    padding-bottom: 50px;
+}

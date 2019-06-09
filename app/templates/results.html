@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{%block content%}
+    
+    <div id="root"></div>
+        {% if images is defined and images %}
+        <script>
+                var data = '{{ images | tojson }}';
+                var dom = document.getElementById("root");
+                data = JSON.parse(data);
+                window.renderPage(dom, {data: data});
+        </script>
+        {% endif %}
+
+<style>
+    div.block {
+        display: inline-block,
+
+    }
+    img {
+        width: 300px;
+        /* height: 0; */
+        padding: 5px;
+        /* top: 50%; */
+        /* left: 50%; */
+    }
+</style>
+{%endblock content%}
