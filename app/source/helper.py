@@ -1,4 +1,5 @@
 import cv2
+import os
 import pickle
 
 def show(img, name):
@@ -15,6 +16,14 @@ def gray(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 def load(path):
+    if not os.path.isfile(path) or os.path.getsize(path) < 1:
+        print("""
+        Invalid file path: %s
+        if you does not build data yet, run:
+        python ./app/source/feature.py
+        """ % path)
+
+        exit(0)
     with open(path, "rb") as f:
         return pickle.load(f)
 

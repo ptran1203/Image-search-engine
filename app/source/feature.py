@@ -22,10 +22,7 @@ IMG_DIR = os.path.join(BASE_DIR, "static/datasets")
 
 class ImageDescriptor:
     def __init__(self, path):
-        # rex = re.compile(r'[a-z0-9_]+\.[a-z]+')
         self.image = self._getimg(path)
-        # self.name = self._file_name(path, rex)
-        # self.path = path
         self.keypoint, self.descriptors = self._features(EXTRACTOR)
 
     @staticmethod
@@ -99,19 +96,15 @@ class Database:
 
     @staticmethod
     def build(num=0):
-        print("START building...")
         data = {}
         sub_dirs = os.listdir(IMG_DIR)
-        # if num > 0:
-        #     sub_dirs = sub_dirs[:num]
-
+        if num > 0:
+            sub_dirs = sub_dirs[:num]
         for sdir in sub_dirs:
             subpaths = os.path.join(IMG_DIR, sdir)
             for file in os.listdir(subpaths):
                 path = os.path.join(subpaths, file)
                 data[file] = ImageDescriptor(path).descriptors
-
-        print("DONE!!")
         save(data, os.path.join(BASE_DIR, "cache/images.pkl"))
 
 class Searcher:
@@ -152,20 +145,22 @@ def loadmodel():
 
 
 if __name__ == "__main__":
-    # cluster = load(os.path.join(BASE_DIR, "cache/model.pkl"))
-    # imgpath = os.path.join(IMG_DIR, "person", "person_0001.jpg")
-    # img = ImageDescriptor(imgpath)
-    # print(cluster.histogram(img))
-    # hiss = load(os.path.join(BASE_DIR, "cache/feature_vectors.pkl"))
-    # print(hiss['person_0000.jpg'])
+    from feature import *
+    from time import time
 
-    cluster = load(os.path.join(BASE_DIR, "cache/model.pkl"))
+    print("START building...")
+    start = time
+    db = Database(0, False)
+    end = time
+    print("Data generated in %s seconds" % (end - start))
+    start = time
+    cluster = ImageCluster(db.images, 32)
+    end = time
+    print("Kmean trained in %s seconds" % (end - start))
+    save(cluster, os.path.join(BASE_DIR, "cache/model.pkl"))
     save(cluster.create_histograms(),
         os.path.join(BASE_DIR, "cache/feature_vectors.pkl"))
 
-    
-    # from feature import *
-    # db = Database(0, False)
-    # cluster = ImageCluster(db.images, 32)
-    # save(cluster, os.path.join(BASE_DIR, "cache/model.pkl"))
+    print("DONE!")
+
     

@@ -11,7 +11,6 @@ from feature import (
 from werkzeug.utils import secure_filename
 import os
 
-
 app = Flask(__name__,
     template_folder= os.path.join(BASE_DIR, "templates")
 )
@@ -63,5 +62,4 @@ if __name__ == '__main__':
             img_src=img_src.replace(app.static_folder, "/static")
         )
 
-    if __name__ == "__main__":
-        app.run(debug=True)
+    app.run(debug=True)
