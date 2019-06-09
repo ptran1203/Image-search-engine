@@ -1,21 +1,17 @@
 {% extends "base.html" %}
 
 {%block content%}
-    <div class="original-img">
-        <h4>Search for</h4>
-        <img src="{{img_src}}" alt="">
-    </div>
-    <div class="container">
-        <h4>Result</h4>
-        {% for img in images %}
-        <div class='block'>
-            {{loop.index}}
-            <!-- {{img}} -->
-            <img src="{{img['path']}}" alt="">
-            <span>{{img['accuracy']}}</span>
-        </div>
-        {% endfor %}
-    </div>
+    
+    <div id="root"></div>
+        {% if images is defined and images %}
+        <script>
+                var data = '{{ images | tojson }}';
+                var dom = document.getElementById("root");
+                data = JSON.parse(data);
+                window.renderPage(dom, {data: data});
+        </script>
+        {% endif %}
+
 <style>
     div.block {
         display: inline-block,

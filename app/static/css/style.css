@@ -1,0 +1,13 @@
+html, body {
+    font-size: 15px;
+}
+.search-form {
+    margin-top: 30%;
+    padding: 1rem;
+}
+
+.search-form.searched {
+    -webkit-transition: margin 0.5s ; /* For Safari 3.1 to 6.0 */
+    transition: margin 0.5s ;
+    margin-top: 1rem;
+}

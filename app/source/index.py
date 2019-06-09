@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, make_response
 from feature import (
     ImageDescriptor,
     Searcher,
@@ -10,13 +10,15 @@ from feature import (
 # from source.feature import *
 from werkzeug.utils import secure_filename
 import os
+import json
 
 app = Flask(__name__,
     template_folder= os.path.join(BASE_DIR, "templates")
 )
 
 IMG_PATH = "/static/images/"
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'static/images')
+# UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)).replace(), '/static/images')
+UPLOAD_FOLDER = BASE_DIR + "/static/images"
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
@@ -29,23 +31,36 @@ if __name__ == '__main__':
     def index():
         return render_template('index.html')
         
+    @app.route("/test", methods=["GET", "POST"])
+    def test():
+        if (request.method == "POST"):
+            # print('a')
+            x = request.form['data']
+            print(x)
+        return render_template('index.html')
+
+
+
+
     @app.route("/results", methods=["GET", "POST"])
     def results():
         img_path = None
         img_src = None
         if request.method == "POST":
-            if 'img-file' in request.files:
-                file = request.files['img-file']
+            from_url = None
+            if 'fromUrl' in request.form.keys():
+                from_url = request.form['fromUrl']
+            if from_url is not None:
+                img_path = request.form['imageUrl']
+                img_src = img_path
+            else:
+                file = request.files['file']
                 img_src = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
                 file.save(img_src)
-                img = ImageDescriptor(img_src, True)
+                img = ImageDescriptor(img_src)
                 img_src = os.path.join(IMG_PATH, file.filename)
-            else:
-                img_path = request.form['img-url']
-                # img = ImageDescriptor(url)
-                img_src = img_path
+                img_path = BASE_DIR+"/"+img_src
 
-        
         res = searcher.search(img_path, 20)
         if not res:
             return render_template('notfound.html')
@@ -56,10 +71,9 @@ if __name__ == '__main__':
                 "path": img[1][1],
                 "accuracy": img[1][0].tolist()[0][0]
             })
-        return render_template(
-            "results.html",
-            images=images,
-            img_src=img_src.replace(app.static_folder, "/static")
-        )
+        resp = make_response(json.dumps({'data': images}))
+        resp.status_code = 200
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
 
     app.run(debug=True)

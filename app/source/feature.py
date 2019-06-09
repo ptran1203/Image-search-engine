@@ -11,14 +11,24 @@ from sklearn.neighbors import NearestNeighbors
 
 # TODO: avoid importError when use helper in index.py
 try:
-    from helper import gray, show, load, save
+    from helper import gray, show, load, save, json_load, json_save
 except ImportError:
-    from source.helper import gray, show, load, save
+    from source.helper import gray, show, load, save, json_load, json_save
 
 
 BASE_DIR = os.path.join(os.getcwd(), "app")
 EXTRACTOR = cv2.xfeatures2d.SIFT_create()
 IMG_DIR = os.path.join(BASE_DIR, "static/datasets")
+NUM_OF_IMGS = {
+    "airplane" : 727,
+    "car": 968,
+    "cat": 885,
+    "dog": 702,
+    "flower": 843,
+    "fruit": 1000,
+    "motobike": 788,
+    "person": 986,
+}
 
 class ImageDescriptor:
     def __init__(self, path):
@@ -36,9 +46,7 @@ class ImageDescriptor:
             array = np.asarray(bytearray(res.read()), dtype=np.uint8)
             img = cv2.imdecode(array, -1)
             if img is not None:
-                print(type(img))
                 return img
-
         return cv2.imread(path)
 
     def _features(self, extractor):
@@ -97,12 +105,14 @@ class Database:
     @staticmethod
     def build(num=0):
         data = {}
-        sub_dirs = os.listdir(IMG_DIR)
+        sub_dirs = [i for i in os.listdir(IMG_DIR) if i.endswith('DS_Store') == False]
         if num > 0:
             sub_dirs = sub_dirs[:num]
         for sdir in sub_dirs:
             subpaths = os.path.join(IMG_DIR, sdir)
             for file in os.listdir(subpaths):
+                if (file.endswith('DS_Store')):
+                    continue
                 path = os.path.join(subpaths, file)
                 data[file] = ImageDescriptor(path).descriptors
         save(data, os.path.join(BASE_DIR, "cache/images.pkl"))
@@ -117,6 +127,14 @@ class Searcher:
             # euclidean or cosine
             vectora.reshape(1, -1), vectorb.reshape(1, -1), 'cosine'
         )
+
+    @staticmethod
+    def _cache(obj, classname):
+        saveobj = [_[0] for _ in obj[:NUM_OF_IMGS[classname]]]
+        json_save(saveobj,
+                os.path.join(BASE_DIR,
+                "cache/result/"+classname+".json"))
+
 
     def search(self, imgpath, limit=10):
         img_dsc = ImageDescriptor(imgpath)
@@ -137,6 +155,8 @@ class Searcher:
             )
 
         res = sorted(cos_dict.items(), key=lambda x: x[1][0])
+
+        self._cache(res, 'dog')
         return res[:limit]
 
 # load cluster model
@@ -149,14 +169,14 @@ if __name__ == "__main__":
     from time import time
 
     print("START building...")
-    start = time
+    start = time()
     db = Database(0, False)
-    end = time
-    print("Data generated in %s seconds" % (end - start))
-    start = time
+    end = time()
+    print("Data has been generated in %s seconds" % (end - start))
+    start = time()
     cluster = ImageCluster(db.images, 32)
-    end = time
-    print("Kmean trained in %s seconds" % (end - start))
+    end = time()
+    print("Kmeans has been trained in %s seconds" % (end - start))
     save(cluster, os.path.join(BASE_DIR, "cache/model.pkl"))
     save(cluster.create_histograms(),
         os.path.join(BASE_DIR, "cache/feature_vectors.pkl"))

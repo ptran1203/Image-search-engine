@@ -1,6 +1,7 @@
 import cv2
 import os
 import pickle
+import json
 
 def show(img, name):
     cv2.namedWindow(name, cv2.WINDOW_NORMAL)
@@ -31,3 +32,11 @@ def save(obj, path):
     with open(path, "wb") as f:
         return pickle.dump(obj,f)
 
+
+def json_save(obj, path):
+    with open(path, "w") as f:
+        return json.dump(obj,f, indent=4)
+
+def json_load(path):
+    with open(path, "r") as f:
+        return json.load(f)
