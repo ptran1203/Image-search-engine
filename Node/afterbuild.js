@@ -25,7 +25,7 @@ const appDist = '../app/static/dist'
 
 copyFunc(srcImages, destImages, function () {
     copyFunc(srcAssets, destAssets, function(){
-        copyFunc(dist, public);
+        // copyFunc(dist, public);
         copyFunc(dist, appDist);
     })
 });
