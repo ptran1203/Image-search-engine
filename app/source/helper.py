@@ -4,8 +4,6 @@ import pickle
 import json
 
 def show(img, name):
-    cv2.namedWindow(name, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(name, 400, 400)
     cv2.imshow(name, img)
     cv2.waitKey(0)
     cv2.destroyWindow(name)
@@ -16,19 +14,17 @@ def gray(img):
     img = img.astype('uint8')
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-def load(path):
-    if not os.path.isfile(path) or os.path.getsize(path) < 1:
+def pickle_load(path):
+    if not is_cached(path):
         print("""
         Invalid file path: %s
-        if you does not build data yet, run:
-        python ./app/source/feature.py
         """ % path)
-
         exit(0)
+
     with open(path, "rb") as f:
         return pickle.load(f)
 
-def save(obj, path):
+def pickle_save(obj, path):
     with open(path, "wb") as f:
         return pickle.dump(obj,f)
 
@@ -40,3 +36,21 @@ def json_save(obj, path):
 def json_load(path):
     with open(path, "r") as f:
         return json.load(f)
+
+
+def is_cached(path):
+    if not os.path.isfile(path) or os.path.getsize(path) < 1:
+        return False
+    return True
+
+
+def show_keypoint_img(path, num_of_keypoints=32):
+    img = cv2.imread(path)
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    EXTRACTOR = cv2.xfeatures2d.SIFT_create()
+    kps = EXTRACTOR.detect(gray)
+    kps = sorted(kps, key=lambda x: -x.response)[:num_of_keypoints]
+    img=cv2.drawKeypoints(gray,kps,None)
+    cv2.imshow('keypoint.jpg', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()

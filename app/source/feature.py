@@ -11,9 +11,15 @@ from sklearn.neighbors import NearestNeighbors
 
 # TODO: avoid importError when use helper in index.py
 try:
-    from helper import gray, show, load, save, json_load, json_save
+    from helper import (
+        gray, show, pickle_load, pickle_save, json_load, json_save,
+        is_cached
+    )
 except ImportError:
-    from source.helper import gray, show, load, save, json_load, json_save
+    from source.helper import (
+        gray, show, pickle_load, pickle_save, json_load, json_save,
+        is_cached
+    )
 
 
 BASE_DIR = os.path.join(os.getcwd(), "app")
@@ -30,8 +36,17 @@ NUM_OF_IMGS = {
     "person": 986,
 }
 
+# paths map for save, load data
+PATHS = {
+    "images": os.path.join(BASE_DIR, "cache/images.pkl"),
+    "model": os.path.join(BASE_DIR, "cache/model.pkl"),
+    "feature_vectors": os.path.join(BASE_DIR, "cache/feature_vectors.pkl"),
+    "clustered": os.path.join(BASE_DIR, "cache/clustered.pkl"),    
+}
+
 class ImageDescriptor:
-    def __init__(self, path):
+    def __init__(self, path, is_train_image=True):
+        self.is_train_image = is_train_image
         self.image = self._getimg(path)
         self.keypoint, self.descriptors = self._features(EXTRACTOR)
 
@@ -41,7 +56,7 @@ class ImageDescriptor:
 
     @staticmethod
     def _getimg(path):
-        if "http" in path:
+        if "http" in path or "data:image" in path:
             res = urlopen(Request(path, headers={'User-Agent': 'Mozilla/5.0'}))
             array = np.asarray(bytearray(res.read()), dtype=np.uint8)
             img = cv2.imdecode(array, -1)
@@ -50,9 +65,10 @@ class ImageDescriptor:
         return cv2.imread(path)
 
     def _features(self, extractor):
+        dimensions = 64
         image = gray(self.image)
         kps = extractor.detect(image)
-        kps = sorted(kps, key=lambda x: -x.response)[:32]
+        kps = sorted(kps, key=lambda x: -x.response)[:dimensions]
         keypoints, descriptors = extractor.compute(image, kps)
         if descriptors is None:
             descriptors = np.zeros(0)
@@ -77,14 +93,11 @@ class ImageCluster:
     def histogram(self, img_dsc):
         if type(img_dsc).__module__ != np.__name__:
             img_dsc = img_dsc.descriptors
-
         his = np.zeros(len(self.kmeans.cluster_centers_))
-        for dsc in img_dsc:
-            prediction = self.kmeans.predict(
-                img_dsc
-                )
-            for pre in prediction:
-                his[pre] += 1
+        prediction = self.kmeans.predict(img_dsc)
+        # print(prediction)
+        for pre in prediction:
+            his[pre] += 1
         return his
 
     def create_histograms(self):
@@ -96,11 +109,11 @@ class ImageCluster:
 
 
 class Database:
-    def __init__(self, number_of_images=0,cached=True):
-        if not cached:
+    def __init__(self, number_of_images=0):
+        if not is_cached(PATHS['images']):
             self.build(number_of_images)
 
-        self.images = load(os.path.join(BASE_DIR, "cache/images.pkl"))
+        self.images = pickle_load(PATHS['images'])
 
     @staticmethod
     def build(num=0):
@@ -115,7 +128,7 @@ class Database:
                     continue
                 path = os.path.join(subpaths, file)
                 data[file] = ImageDescriptor(path).descriptors
-        save(data, os.path.join(BASE_DIR, "cache/images.pkl"))
+        pickle_save(data, PATHS['images'])
 
 class Searcher:
     def __init__(self, cluster_object):
@@ -137,15 +150,14 @@ class Searcher:
 
 
     def search(self, imgpath, limit=10):
-        img_dsc = ImageDescriptor(imgpath)
+        img_dsc = ImageDescriptor(imgpath, True)
         if img_dsc.image is None:
             return None
         fea_vector = self.cluster.histogram(img_dsc)
         images = self.cluster.images
-        feature_vectors = load(
-            os.path.join(BASE_DIR, "cache/feature_vectors.pkl")
-        )
+        feature_vectors = pickle_load(PATHS["feature_vectors"])
         cos_dict = {}
+
         rex = re.compile(r'_[0-9]+.[a-z]+')
         for name, fea_vec in feature_vectors.items():
             path = os.path.join("/static/datasets/", re.sub(rex,'', name),name)
@@ -161,26 +173,42 @@ class Searcher:
 
 # load cluster model
 def loadmodel():
-    return load(os.path.join(BASE_DIR, "cache/model.pkl"))
+    return pickle_load(PATHS["model"])
 
 
 if __name__ == "__main__":
     from feature import *
     from time import time
 
+    base = "/home/ptran/git/Image-search-engine/app/"
+    imgpath = base + "static/datasets/airplane/airplane_0002.jpg"
+    cl = pickle_load(PATHS['model'])
+    img = ImageDescriptor(imgpath)
+    hist = cl.histogram(img.descriptors)
+    print(hist)
+    c = 0
+    for h in hist:
+        if h != 0:
+            c += h
+            print(h)
+    print(c)
+    exit(0)
     print("START building...")
     start = time()
-    db = Database(0, False)
+    db = Database()
     end = time()
     print("Data has been generated in %s seconds" % (end - start))
-    start = time()
-    cluster = ImageCluster(db.images, 32)
-    end = time()
-    print("Kmeans has been trained in %s seconds" % (end - start))
-    save(cluster, os.path.join(BASE_DIR, "cache/model.pkl"))
-    save(cluster.create_histograms(),
-        os.path.join(BASE_DIR, "cache/feature_vectors.pkl"))
-
+    cluster = None
+    if not is_cached(PATHS["model"]):
+        start = time()
+        cluster = ImageCluster(db.images, 200)
+        end = time()
+        print("Kmeans has been trained in %s seconds" % (end - start))
+        print("saving data....")
+        pickle_save(cluster, PATHS["model"])
+    else:
+        cluster = pickle_load(PATHS["model"])
+    pickle_save(cluster.create_histograms(),PATHS["feature_vectors"])
     print("DONE!")
 
     

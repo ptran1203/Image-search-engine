@@ -14,6 +14,7 @@ gray= cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
 EXTRACTOR = cv2.xfeatures2d.SIFT_create()
 kps = EXTRACTOR.detect(gray)
+print([x.__str__ for x in kps])
 kps = sorted(kps, key=lambda x: -x.response)[:32]
 img=cv2.drawKeypoints(gray,kps,None)
 
