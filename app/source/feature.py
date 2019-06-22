@@ -179,20 +179,6 @@ def loadmodel():
 if __name__ == "__main__":
     from feature import *
     from time import time
-
-    base = "/home/ptran/git/Image-search-engine/app/"
-    imgpath = base + "static/datasets/airplane/airplane_0002.jpg"
-    cl = pickle_load(PATHS['model'])
-    img = ImageDescriptor(imgpath)
-    hist = cl.histogram(img.descriptors)
-    print(hist)
-    c = 0
-    for h in hist:
-        if h != 0:
-            c += h
-            print(h)
-    print(c)
-    exit(0)
     print("START building...")
     start = time()
     db = Database()
